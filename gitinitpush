@@ -1,0 +1,29 @@
+#!/bin/bash
+
+DEFAULT_COMMIT_MESSAGE='Initial commit'
+
+remoteUrl="$1"
+if [ -z "$remoteUrl" ]; then
+    echo -n "Type remote url: "
+    read remoteUrl
+fi
+
+commitMessage="$2"
+if [ -z "$commitMessage" ]; then
+    echo -n "Type commit message <'${DEFAULT_COMMIT_MESSAGE}'>: "
+    read commitMessage
+    
+    if [ -z "$commitMessage" ]; then
+        commitMessage="$DEFAULT_COMMIT_MESSAGE"
+    fi
+fi
+
+set -e
+
+git init
+git remote add origin "$remoteUrl"
+git fetch
+git checkout -b master
+git add --all
+git commit -m "$commitMessage"
+git push --set-upstream origin master

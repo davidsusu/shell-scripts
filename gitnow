@@ -1,0 +1,19 @@
+#!/bin/bash
+
+git add --all
+
+if git rev-parse HEAD > /dev/null 2> /dev/null; then
+  
+  SUMMARY=`git diff --cached --shortstat | sed -r 's/^ +//'`
+  STATUS=`git status -s --porcelain`
+  MESSAGE="Updated: ${SUMMARY}
+
+${STATUS}"
+  
+else
+  MESSAGE="Initial commit"
+fi
+
+git commit -m "$MESSAGE"
+
+git push
