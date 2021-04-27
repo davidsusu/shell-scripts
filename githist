@@ -5,4 +5,4 @@ if [ -z "$max" ]; then
     max=15
 fi
 
-git log -n "$max" --oneline --graph --reflog 
+git log -n "$max" --oneline --graph
