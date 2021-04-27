@@ -2,7 +2,9 @@
 
 git add --all
 
-if git rev-parse HEAD > /dev/null 2> /dev/null; then
+if [ -n "$1" ]; then
+  MESSAGE="$1"
+elif git rev-parse HEAD > /dev/null 2> /dev/null; then
   
   SUMMARY=`git diff --cached --shortstat | sed -r 's/^ +//'`
   STATUS=`git status -s --porcelain`
