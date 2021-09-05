@@ -1,0 +1,8 @@
+#!/bin/bash
+
+max="$1"
+if [ -z "$max" ]; then
+    max=15
+fi
+
+git log --simplify-by-decoration --graph --oneline --all
