@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 max="$1"
 if [ -z "$max" ]; then
