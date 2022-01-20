@@ -1,0 +1,19 @@
+#!/bin/sh
+
+ref="$1"
+head="$2"
+if [ -z "$head" ]; then
+    head="HEAD"
+fi
+
+commit=$( git rev-parse "$ref"^{commit} )
+distance="$( git rev-list --count --ancestry-path --first-parent "$commit".."$head" )"
+found="$( git rev-parse HEAD~"$distance" )"
+
+if [ "$commit" != "$found" ]; then
+    echo "${ref} is not a first-parent ancestor of ${head}"
+    exit 1
+fi
+
+echo "${ref} is a first-parent ancestor of ${head} at a distance of ${distance}"
+exit 0
