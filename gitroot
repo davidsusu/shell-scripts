@@ -1,3 +1,6 @@
 # should be dot sourced
 
+# Changes to the root directory of the current git repo
+# Usage: gitroot
+
 cd "$( git rev-parse --show-toplevel )"

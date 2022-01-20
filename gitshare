@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Shares an existing local directory to an empty remote git repo
+# Usage: gitshare [<remote-url=<interactive>> [<commit-message=<interactive>>]]
+
 DEFAULT_COMMIT_MESSAGE='Initial commit'
 
 remoteUrl="$1"

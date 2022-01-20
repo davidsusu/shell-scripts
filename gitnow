@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Commits and pushes all local changes
+# Usage: gitnow [<commit-message=<generated>>]
+
 git add --all
 
 if [ -n "$1" ]; then

@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Displays recent commit history
+# Usage: githist [<max=15>]
+
 max="$1"
 if [ -z "$max" ]; then
     max=15

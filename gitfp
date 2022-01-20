@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Checks whether a commit is in the first-parent history
+# Usage: gitfp <ref> [<head=HEAD>]
+
 ref="$1"
 head="$2"
 if [ -z "$head" ]; then
