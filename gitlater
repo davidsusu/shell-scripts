@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# Commits local changes at the specified date (no pull/push)
+# Usage: gitlater [<commit-date> <commit-message=<generated>>]
+
+git add --all
+
+DATE="$1"
+
+if [ -n "$2" ]; then
+  MESSAGE="$2"
+elif git rev-parse HEAD > /dev/null 2> /dev/null; then
+  
+  SUMMARY=`git diff --cached --shortstat | sed -r 's/^ +//'`
+  STATUS=`git status -s --porcelain`
+  MESSAGE="Updated: ${SUMMARY}
+
+${STATUS}"
+  
+else
+  MESSAGE="Initial commit"
+fi
+
+export GIT_AUTHOR_DATE="$DATE"
+export GIT_COMMITTER_DATE="$DATE"
+git commit -m "$MESSAGE"
