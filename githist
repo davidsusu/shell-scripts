@@ -8,4 +8,4 @@ if [ -z "$max" ]; then
     max=15
 fi
 
-git log -n "$max" --oneline --graph
+git log -n "$max" --pretty=format:'%C(yellow)%h %C(cyan)%ad %Cgreen%an%C(auto)%d %Creset%s' --date=iso8601 --graph
