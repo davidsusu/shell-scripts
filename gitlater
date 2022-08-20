@@ -1,9 +1,7 @@
 #!/bin/sh
 
-# Commits local changes at the specified date (no pull/push)
-# Usage: gitlater [<commit-date> <commit-message=<generated>>]
-
-git add --all
+# Commits staged changes at the specified date (no pull/push)
+# Usage: gitlater <commit-date> <commit-message=<generated>>
 
 DATE="$1"
 
