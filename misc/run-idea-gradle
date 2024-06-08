@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# This is a simple script to launch simple gradle projects using configuration in IntelliJ IDEA.
+# IntelliJ IDEA is a memory and CPU hog.
+# So, if you are forced to use its configuration,
+# this script can help in avoidding launching IntelliJ IDEA itself.
+# Currently, config recognition and environment variable injection is implemented.
+
+START_DIRECTOY="$( realpath . )"
+DIRECTORY="$( realpath "$1" )"
+GRADLE_COMMAND="$2"
+
+while read assignment; do
+    if [ -n $assignment ]; then
+        export "$assignment"
+    fi
+done <<< $(
+    egrep '<configuration [^>]+[SmartApi:bootRun][^>]+ type="GradleRunConfiguration' -m 1 -A 10000 .idea/workspace.xml |
+    egrep '<option [^>]*name="env"' -m 1 -A 10000 |
+    egrep '<map\b' -m 1 -A 10000 |
+    egrep '</map>' -m 1 -B 10000 |
+    egrep '<entry' |
+    sed -E 's/^.*?\bkey="//' |
+    sed -E 's/".*?\bvalue="/=/' |
+    sed -E 's/".*$//' |
+    cat
+);
+
+export JAVA_HOME=/opt/intellij/jbr
+
+cd "$DIRECTORY"
+./gradlew -D'org.gradle.jvmargs=-Xmx500m' "$GRADLE_COMMAND"
+cd "$START_DIRECTOY"

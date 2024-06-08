@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# The main motivation behing this simple script is making 2-factor authentication easy.
+# It executes a TOTP code generation, copy the code to the clipboard,
+# and send a GUI notification to the user.
+# You can easily use it from panel or context menus, CLI, or any other way
+
+name="$1"
+code="$( pass otp "$name" )"
+echo -n "$code" | xclip -sel clip
+notify-send -t 10000 "The code is on the clipboard: ${code}"

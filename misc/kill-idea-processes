@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# This is a simple helper script to force stop a process launched by IntelliJ IDEA.
+
+kill $( pgrep -f '^/opt/intellij/jbr/bin/java ' )
