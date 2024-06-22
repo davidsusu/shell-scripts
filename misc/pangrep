@@ -1,13 +1,33 @@
 #!/bin/bash
 
-# This script is like to egrep, but can search in any type of files.
-# First, it converts the file to plain text, then run grep on this plain text output.
-# You can use the same options as for grep, with some exception.
-# File matching and recursion options will be handled by the script itself.
-# By default, extended regular expressions will be used.
-# There are additional options too, e. g. `-t`/`--type`.
+read -r -d '' USAGE <<"USAGEDOC"
+pangrep - universal file content search
+
+Usage:
+
+    pangrep <pattern> <paths> <options>
+
+Example:
+
+    pangrep -i '\blorem\w+' -R . --include='*.pdf' --nice
+
+This script is similar to grep, but can search in many type of files.
+First, it converts the file to plain text, then runs grep on this plain text output.
+You can use the same options as for grep, with minor exceptions.
+File matching and recursion options will be handled by the script itself.
+By default, extended regular expressions will be used.
+There are additional options:
+  - --type <type>`: sets an explicit input file type
+  - `--nice`: appends `-n -C 3 --color=always` to grep options
+USAGEDOC
+
+if [ "$#" == '0' ] || { [ "$#" == '1' ] && { [ "$1" == '-h' ] || [ "$1" == '--help' ]; }; }; then
+    printf '\n%s\n\n' "$USAGE"
+    exit 0
+fi
 
 GREP_OPTS_WITH_PARAM='-e --regexp -f --file -m --max-count --label -A --after-context -B -before-context -C --context --group-separator --binary-files -D --devices -d --directories --exclude --exclude-from --exclude-dir --include'
+GREP_OPTS_NICE='-n -C 3 --color=always'
 
 function write() {
     printf '%s\n' "$1"
@@ -18,34 +38,53 @@ function escape_argument() {
 }
 
 function glob_match() {
-    glob="$1"
-    path="$2"
+    local glob="$1"
+    local path="$2"
     
-    # TODO: glob match
-    
+    local globRemaining="$glob"
+    local pathRemaining="$path"
+    while [[ "$globRemaining" != "" && "$pathRemaining" != "" ]]; do
+        local globToken="$( basename "$globRemaining" )"
+        local pathToken="$( basename "$pathRemaining" )"
+
+        case "$pathToken" in
+            $globToken) ;;
+            *) return 1 ;;
+        esac
+
+        globRemaining="$( dirname "$globRemaining" )"
+        if [ "$globRemaining" == '.' ]; then
+            globRemaining=''
+        fi
+        pathRemaining="$( dirname "$pathRemaining" )"
+        if [ "$pathRemaining" == '.' ]; then
+            pathRemaining=''
+        fi
+    done
+
+    if [ -n "$globRemaining" ]; then
+        return 1
+    fi
+
     return 0
 }
 
 function rule_match() {
-    path="$1"
-    includes="$2"
-    excludes="$3"
+    local path="$1"
+    local includes="$2"
+    local excludes="$3"
     
-    if ! [ -f "$path" ]; then
-        exit 1
-    fi
-
-    realPath="$( realpath "$path" )"
+    local realPath="$( realpath "$path" )"
     
-    IFS=$'\n'
+    local IFS=$'\n'
+    
     for exclude in $excludes; do
         if glob_match "$exclude" "$realPath"; then
             return 1
         fi
     done
     
-    hasIncludes=''
-    IFS=$'\n'
+    local hasIncludes=''
     for include in $includes; do
         hasIncludes='1'
         if glob_match "$include" "$realPath"; then
@@ -53,26 +92,31 @@ function rule_match() {
         fi
     done
     
-    if [ "$hasIncludes" == '' ]; then
+    if [ -n "$hasIncludes" ]; then
+        return 1
+    fi
+    
+    if [ -f "$path" ]; then
         return 0
     else
+        write "File not found: ${path}" >&2
         return 1
     fi
 }
 
 function detect_type() {
-    path="$1"
+    local path="$1"
     
-    filename="$( basename -- "$path" )"
-    extension="${filename##*.}"
+    local filename="$( basename -- "$path" )"
+    local extension="${filename##*.}"
     if [ "$extension" != "$filename" ]; then
         write "$extension"
     fi
 }
 
 function calculate_type() {
-    explicitType="$1"
-    path="$2"
+    local explicitType="$1"
+    local path="$2"
     
     if [ -n "$explicitType" ]; then
         write "$explicitType"
@@ -82,17 +126,18 @@ function calculate_type() {
 }
 
 function search_in_file() {
-    grepCommand="$1"
-    path="$2"
-    type="$3"
-    includes="$4"
-    excludes="$5"
+    local grepCommand="$1"
+    local path="$2"
+    local type="$3"
+    local includes="$4"
+    local excludes="$5"
     
     if ! rule_match "$path" "$includes" "$excludes"; then
         return 1
     fi
     
-    calculatedType="$( calculate_type "$type" "$path" )"
+    local calculatedType="$( calculate_type "$type" "$path" )"
+    local command=''
     if [ "$calculatedType" == 'pdf' ]; then
         command="pdftotext $( escape_argument "$path" ) - 2>/dev/null | ${grepCommand}"
     else
@@ -100,79 +145,98 @@ function search_in_file() {
         if [ -n "$type" ]; then
             additionalPandocParameters=" $( escape_argument "--from=${type}" )"
         fi
-        command="pandoc $( escape_argument "$path" ) --to 'txt' additionalPandocParameters | ${grepCommand}"
+        command="pandoc $( escape_argument "$path" ) --to 'plain' ${additionalPandocParameters} | ${grepCommand}"
     fi
     
-    output="$( sh -c "$command" )"
+    local output="$( sh -c "$command" )"
     if [ -n "$output" ]; then
         write "--------- ${path}:"
-        echo ""
+        write ''
         write "$output"
-        echo ""
+        write ''
     fi
 }
 
 function search_in_directory() {
-    grepCommand="$1"
-    path="$2"
-    type="$3"
-    includes="$4"
-    excludes="$5"
+    local grepCommand="$1"
+    local path="$2"
+    local type="$3"
+    local includes="$4"
+    local excludes="$5"
+    local doDereference="$6"
     
-    # TODO: recursive search in directory
-    
-    echo "DIR: $path / $exclusions / $grepCommand"
+    local entries="$( ls -A "$path" )"
+    local IFS=$'\n'
+    for entry in $entries; do
+        local subPath="${path}/${entry}"
+        if [ -L "$subPath" ] && [ -z "$doDereference" ]; then
+            continue
+        fi
+        if [ -f "$subPath" ]; then
+            search_in_file "$grepCommand" "$subPath" "$type" "$includes" "$excludes"
+        elif [ -d "$subPath" ]; then
+            search_in_directory "$grepCommand" "$subPath" "$type" "$includes" "$excludes" "$doDereference"
+        fi
+    done
 }
 
 type=''
-escapedIncludeOptions=''
 includes=''
-escapedExcludeOptions=''
 excludes=''
-escapedOptions=''
+grepOptionsString=''
 searchString=''
 searchStringFound=''
 paths=''
 isRecursive=''
 isDereferenceRecursive=''
+flavour='extended-regexp'
 nextIsInclude=''
 nextIsExclude=''
 nextIsGrepParam=''
 for arg in "$@"; do
-    if [ "$nextIsInclude" == '1' ]; then
-        escapedIncludeOptions="${escapedIncludeOptions} $( escape_argument "--include=$arg" )"
+    if [ -n "$nextIsInclude" ]; then
         includes="${includes}${arg}"$'\n'
         nextIsInclude='0'
-    elif [ "$nextIsExclude" == '1' ]; then
-        escapedExcludeOptions="${escapedExcludeOptions} $( escape_argument "--exclude=$arg" )"
+    elif [ -n "$nextIsExclude" ]; then
         excludes="${excludes}${arg}"$'\n'
         nextIsExclude='0'
-    elif [ "$nextIsGrepParam" == '1' ]; then
-        escapedOptions="${escapedOptions} $( escape_argument "$arg" )"
+    elif [ -n "$nextIsGrepParam" ]; then
+        grepOptionsString="${grepOptionsString} $( escape_argument "$arg" )"
         nextIsGrepParam='0'
-    elif [ "$nextIsType" == '1' ]; then
+    elif [ -n "$nextIsType" ]; then
         type="$arg"
         nextIsType='0'
     elif [ "$arg" == '-r' ] || [ "$arg" == '--recursive' ]; then
         isRecursive='1'
     elif [ "$arg" == '-R' ] || [ "$arg" == '--dereference-recursive' ]; then
+        isRecursive='1'
         isDereferenceRecursive='1'
     elif [ "$arg" == '--include' ]; then
         nextIsInclude='1'
+    elif [ "$arg" == '-E' ] || [ "$arg" == '--extended-regexp' ]; then
+       flavour='extended-regexp'
+    elif [ "$arg" == '-F' ] || [ "$arg" == '--fixed-strings' ]; then
+       flavour='fixed-strings'
+    elif [ "$arg" == '-G' ] || [ "$arg" == '--basic-regexp' ]; then
+       flavour='basic-regexp'
+    elif [ "$arg" == '-P' ] || [ "$arg" == '--perl-regexp' ]; then
+       flavour='perl-regexp'
     elif [[ "$arg" =~ --include=(.*) ]]; then
-        escapedIncludeOptions="${escapedIncludeOptions} $( escape_argument "$arg" )"
         includes="${includes}${BASH_REMATCH[1]}"$'\n'
     elif [ "$arg" == '--exclude' ]; then
         nextIsExclude='1'
     elif [[ "$arg" =~ --exclude=(.*) ]]; then
-        escapedExcludeOptions="${escapedExcludeOptions} $( escape_argument "$arg" )"
         excludes="${excludes}${BASH_REMATCH[1]}"$'\n'
     elif [ "$arg" == '--color' ]; then
-        escapedOptions="${escapedOptions} $( escape_argument '--color=always' )"
+        grepOptionsString="${grepOptionsString} $( escape_argument '--color=always' )"
     elif [ "$arg" == '--type' ]; then
         nextIsType='1'
+    elif [[ "$arg" =~ --type=(.*) ]]; then
+        type="$arg"
+    elif [ "$arg" == '--nice' ]; then
+        grepOptionsString="${grepOptionsString} ${GREP_OPTS_NICE}"
     elif [[ "$arg" == -* ]]; then
-        escapedOptions="${escapedOptions} $( escape_argument "$arg" )"
+        grepOptionsString="${grepOptionsString} $( escape_argument "$arg" )"
         if [[ " ${GREP_OPTS_WITH_PARAM} " =~ [[:space:]]$arg[[:space:]] ]]; then
             nextIsGrepParam='1'
         fi
@@ -184,16 +248,13 @@ for arg in "$@"; do
     fi
 done
 
-# TODO: handle regex flavour options -E, -F, -G, -P
-
-grepCommand="grep $( escape_argument "$searchString" ) ${escapedOptions}"
+grepCommand="grep $( escape_argument "$searchString" ) ${grepOptionsString} --${flavour}"
 
 IFS=$'\n'
 for path in $paths; do
-    if [ -f ]; then
+    if [ -f "$path" ]; then
         search_in_file "$grepCommand" "$path" "$type" "$includes" "$excludes"
+    elif [ -d "$path" ] && [ -n "$isRecursive" ]; then
+        search_in_directory "$grepCommand" "$path" "$type" "$includes" "$excludes" "$isDereferenceRecursive"
     fi
-    
-    # TODO: recursion
-    
 done
