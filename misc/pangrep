@@ -11,7 +11,7 @@ Example:
 
     pangrep -i '\blorem\w+' -R . --include='*.pdf' --nice
 
-This script is similar to grep, but can search in many type of files.
+This script is similar to grep, but can search in many types of files.
 First, it converts the file to plain text, then runs grep on this plain text output.
 You can use the same options as for grep, with minor exceptions.
 File matching and recursion options will be handled by the script itself.
@@ -26,7 +26,7 @@ if [ "$#" == '0' ] || { [ "$#" == '1' ] && { [ "$1" == '-h' ] || [ "$1" == '--he
     exit 0
 fi
 
-GREP_OPTS_WITH_PARAM='-e --regexp -f --file -m --max-count --label -A --after-context -B -before-context -C --context --group-separator --binary-files -D --devices -d --directories --exclude --exclude-from --exclude-dir --include'
+GREP_OPTS_WITH_PARAM='-e --regexp -f --file -m --max-count --label -A --after-context -B --before-context -C --context --group-separator --binary-files -D --devices -d --directories --exclude --exclude-from --exclude-dir --include'
 GREP_OPTS_NICE='-n -C 3 --color=always'
 
 function write() {
@@ -43,7 +43,7 @@ function glob_match() {
     
     local globRemaining="$glob"
     local pathRemaining="$path"
-    while [[ "$globRemaining" != "" && "$pathRemaining" != "" ]]; do
+    while [ -n "$globRemaining" ] &&  [ -n "$pathRemaining" ]; do
         local globToken="$( basename "$globRemaining" )"
         local pathToken="$( basename "$pathRemaining" )"
 
@@ -140,6 +140,10 @@ function search_in_file() {
     local command=''
     if [ "$calculatedType" == 'pdf' ]; then
         command="pdftotext $( escape_argument "$path" ) - 2>/dev/null | ${grepCommand}"
+    elif [ "$calculatedType" == 'doc' ]; then
+        command="catdoc $( escape_argument "$path" ) | ${grepCommand}"
+    elif [[ "$arg" =~ (te?xt|plain) ]]; then
+        command="cat $( escape_argument "$path" ) | ${grepCommand}"
     else
         additionalPandocParameters=""
         if [ -n "$type" ]; then
@@ -196,16 +200,16 @@ nextIsGrepParam=''
 for arg in "$@"; do
     if [ -n "$nextIsInclude" ]; then
         includes="${includes}${arg}"$'\n'
-        nextIsInclude='0'
+        nextIsInclude=''
     elif [ -n "$nextIsExclude" ]; then
         excludes="${excludes}${arg}"$'\n'
-        nextIsExclude='0'
+        nextIsExclude=''
     elif [ -n "$nextIsGrepParam" ]; then
         grepOptionsString="${grepOptionsString} $( escape_argument "$arg" )"
-        nextIsGrepParam='0'
+        nextIsGrepParam=''
     elif [ -n "$nextIsType" ]; then
         type="$arg"
-        nextIsType='0'
+        nextIsType=''
     elif [ "$arg" == '-r' ] || [ "$arg" == '--recursive' ]; then
         isRecursive='1'
     elif [ "$arg" == '-R' ] || [ "$arg" == '--dereference-recursive' ]; then
@@ -214,13 +218,13 @@ for arg in "$@"; do
     elif [ "$arg" == '--include' ]; then
         nextIsInclude='1'
     elif [ "$arg" == '-E' ] || [ "$arg" == '--extended-regexp' ]; then
-       flavour='extended-regexp'
+        flavour='extended-regexp'
     elif [ "$arg" == '-F' ] || [ "$arg" == '--fixed-strings' ]; then
-       flavour='fixed-strings'
+        flavour='fixed-strings'
     elif [ "$arg" == '-G' ] || [ "$arg" == '--basic-regexp' ]; then
-       flavour='basic-regexp'
+        flavour='basic-regexp'
     elif [ "$arg" == '-P' ] || [ "$arg" == '--perl-regexp' ]; then
-       flavour='perl-regexp'
+        flavour='perl-regexp'
     elif [[ "$arg" =~ --include=(.*) ]]; then
         includes="${includes}${BASH_REMATCH[1]}"$'\n'
     elif [ "$arg" == '--exclude' ]; then
