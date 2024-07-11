@@ -1,0 +1,20 @@
+
+test_no_args() {
+    assert_equals hu_HU "$( LC_MESSAGES=hu_HU loc )"
+}
+
+test_many_args() {
+    assert_equals hu_HU "$( LC_MESSAGES=hu_HU loc en_HU hu_AX hu_H hu_HU hu_XX en_HU en_US )"
+}
+
+test_loose_match() {
+    assert_equals hu "$( LC_MESSAGES=hu_HU loc en hu de )"
+}
+
+test_more_loose_match() {
+    assert_equals hu "$( LC_MESSAGES=hu_HU.utf-8 loc en hu de )"
+}
+
+test_fallback() {
+    assert_equals zzz "$( LC_MESSAGES=aaa loc xxx yyy zzz )"
+}

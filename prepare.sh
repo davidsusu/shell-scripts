@@ -3,7 +3,9 @@
 selfDir="$( dirname -- "$( realpath "$0" )" )"
 
 chmod +x "${selfDir}/prepare.sh"
+chmod +x "${selfDir}/run-tests.sh"
 chmod +x "${selfDir}/bin/"*
+chmod -x "${selfDir}/tests/"*
 
 bashRcDir="${HOME}/.bashrc.d"
 if [ -d "$bashRcDir" ]; then
