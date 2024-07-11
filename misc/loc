@@ -1,0 +1,28 @@
+#!/bin/sh
+
+if [ -n "$LC_MESSAGES" ]; then
+    locale="$LC_MESSAGES"
+elif [ -n "$LANG" ]; then
+    locale="$LANG"
+else
+    locale="en_US"
+fi
+
+if [ "$#" -eq 0 ]; then
+    echo "$locale"
+    exit 0
+fi
+
+lang="$( echo "$locale" | cut -d'_' -f1 )"
+terr="$( echo "$locale" | cut -d'_' -f2 | cut -d'.' -f1 )"
+cset="$( echo "$locale" | cut -d'_' -f2 |  cut -d'.' -f2 | cut -d'@' -f1 )"
+mod="$( echo "$locale" | cut -d'_' -f2 |  cut -d'.' -f2 | cut -d'@' -f2 )"
+
+for arg in "$@"; do
+    if [ "$arg" = "$lang" ] || [ "$arg" = "${lang}_${terr}" ] || [ "$arg" = "${lang}_${terr}.${cset}" ] || [ "$arg" = "${lang}_${terr}.${cset}@${mod}" ]; then
+        echo "$arg"
+        exit 0
+    fi
+done
+
+echo "$arg"
