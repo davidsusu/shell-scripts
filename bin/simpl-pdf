@@ -1,0 +1,8 @@
+#! /bin/sh
+
+sourceFile="$1"
+targetFile="$2"
+
+finalPages="$( pdftk "$sourceFile" dump_data | egrep "PageLabelNewIndex" | sed 's/[^0-9]//g' | sed '1d' | sed -r 's/(.*)/echo $((\1-1))/ge' | tr '\n' ' ')"
+
+pdftk "$sourceFile" cat $finalPages end output "$targetFile"

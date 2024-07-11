@@ -1,0 +1,62 @@
+#!/bin/bash
+
+if [ "$#" -ne 4 ]; then
+    echo "Usage: $0 <repo_url> <commit_id> <file_path> <line_number>"
+    exit 1
+fi
+
+REPO_URL=$1
+COMMIT_ID=$2
+FILE_PATH=$3
+LINE_NUMBER=$4
+
+# Create a temporary directory
+TEMP_DIR=$(mktemp -d)
+ARCHIVE_FILE="$TEMP_DIR/archive.tar.gz"
+
+# Function to clean up temporary directory
+cleanup() {
+    rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
+
+# Fetch the specific file from the specific commit
+git archive --remote="$REPO_URL" "$COMMIT_ID" "$FILE_PATH" --output="$ARCHIVE_FILE"
+if [ $? -ne 0 ]; then
+    echo "Failed to fetch file from repository"
+    exit 1
+fi
+
+# Extract the file from the archive
+tar -xzf "$ARCHIVE_FILE" -C "$TEMP_DIR"
+if [ $? -ne 0 ]; then
+    echo "Failed to extract file from archive"
+    exit 1
+fi
+
+# Print the context of the specified line
+FULL_FILE_PATH="$TEMP_DIR/$FILE_PATH"
+if [ ! -f "$FULL_FILE_PATH" ]; then
+    echo "File $FILE_PATH not found in commit $COMMIT_ID"
+    exit 1
+fi
+
+# Adjust line number to be 1-indexed for printing context
+LINE_NUMBER=$((LINE_NUMBER))
+
+# Print the context of the specified line
+START_LINE=$((LINE_NUMBER - 5))
+if [ "$START_LINE" -lt 1 ]; then
+    START_LINE=1
+fi
+
+END_LINE=$((LINE_NUMBER + 5))
+TOTAL_LINES=$(wc -l < "$FULL_FILE_PATH")
+
+if [ "$END_LINE" -gt "$TOTAL_LINES" ]; then
+    END_LINE="$TOTAL_LINES"
+fi
+
+awk -v start="$START_LINE" -v end="$END_LINE" -v target="$LINE_NUMBER" 'NR>=start && NR<=end {prefix = (NR == target) ? ">" : " "; print prefix " " NR ": " $0}' "$FULL_FILE_PATH"
+
+exit 0
