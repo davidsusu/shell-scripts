@@ -52,11 +52,11 @@ function glob_match() {
             *) return 1 ;;
         esac
 
-        globRemaining="$( dirname "$globRemaining" )"
+        globRemaining="$( dirname -- "$globRemaining" )"
         if [ "$globRemaining" == '.' ]; then
             globRemaining=''
         fi
-        pathRemaining="$( dirname "$pathRemaining" )"
+        pathRemaining="$( dirname -- "$pathRemaining" )"
         if [ "$pathRemaining" == '.' ]; then
             pathRemaining=''
         fi
@@ -74,7 +74,7 @@ function rule_match() {
     local includes="$2"
     local excludes="$3"
     
-    local realPath="$( realpath "$path" )"
+    local realPath="$( realpath -- "$path" )"
     
     local IFS=$'\n'
     

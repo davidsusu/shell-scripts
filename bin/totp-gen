@@ -5,7 +5,7 @@
 # and send a GUI notification to the user.
 # You can easily use it from panel or context menus, CLI, or any other way
 
-selfDir="$( dirname -- "$( realpath "$0" )" )"
+selfDir="$( dirname -- "$( realpath -- "$0" )" )"
 
 case "$( "${selfDir}/loc" hu en )" in
     'hu') message="A kód a vágólapra került" ;;

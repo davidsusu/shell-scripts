@@ -6,8 +6,8 @@
 # this script can help in avoidding launching IntelliJ IDEA itself.
 # Currently, config recognition and environment variable injection is implemented.
 
-START_DIRECTOY="$( realpath . )"
-DIRECTORY="$( realpath "$1" )"
+START_DIRECTOY="$( realpath -- . )"
+DIRECTORY="$( realpath -- "$1" )"
 GRADLE_COMMAND="$2"
 
 while read assignment; do
