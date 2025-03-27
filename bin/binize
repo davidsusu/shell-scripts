@@ -1,0 +1,98 @@
+#!/bin/sh
+
+# Creates a symlink in a bin folder to be includeable in the $PATH.
+# Usage: binize [options] <executable-paths...>
+# Available options:
+#   -t|--target-dir <path>: the target bin dir (can be relative to the executable)
+#   -f|--force-overwrite: if present, existing symlinks will be replaced
+#   -v|--verbose: if present, verbose mode will be applied
+#   --: after dash-dash all arguments will be interpreted as an executable path parameter
+
+targetDir='bin'
+forceOverwrite=''
+verboseMode=''
+
+NL='
+'
+
+executables=''
+
+nextOpt=''
+afterDashDash=''
+while [ "$#" -gt 0 ]
+do
+    arg="$1"
+    shift
+    
+    if [ -z "$afterDashDash" ]; then
+        if [ "$nextOpt" = 'targetDir' ]; then
+            targetDir="$arg"
+            nextOpt=''
+            continue
+        fi
+        
+        if [ "$arg" = '-t' ] || [ "$arg" = '--target-dir' ]; then
+            nextOpt='targetDir'
+            continue
+        elif [ "$arg" = '-f' ] || [ "$arg" = '--force-overwrite' ]; then
+            forceOverwrite='1'
+            continue
+        elif [ "$arg" = '-v' ] || [ "$arg" = '--verbose' ]; then
+            verboseMode='1'
+            continue
+        elif [ "$arg" = '--' ]; then
+            afterDashDash='1'
+            continue
+        fi
+        
+        case "$arg" in -*)
+            echo "FATAL: Unsupported option: ${arg}" >&2
+            exit 1
+        esac
+    fi
+    
+    executables="${executables}${arg}${NL}"
+done
+
+if [ -n "$nextOpt" ]; then
+    echo "FATAL: Unfinished parameter: ${nextOpt}" >&2
+    exit 1
+fi
+
+printf '%s' "$executables" | while IFS='' read -r executable; do
+    if [ ! -e "$executable" ]; then
+        echo "WARNING: Executable not found: ${executable}" >&2
+        continue
+    fi
+    
+    executablePath="$( realpath -- "$executable" )"
+    executableName="$( basename -- "$executablePath" )"
+    case "$targetDir" in
+        /* )
+            binPath="$targetDir"
+            ;;
+        *)
+            binPath="$( dirname -- "$executablePath" )/${targetDir}"
+            ;;
+    esac
+    binPath="$( realpath -- "$binPath" )"
+    symlinkPath="${binPath}/${executableName}"
+    
+    if [ ! -d "$binPath" ]; then
+        mkdir -p "$binPath"
+        if [ ! -d "$binPath" ]; then
+            echo "WARNING: Target directory cannot be created ${binPath}" >&2
+            continue
+        fi
+    fi
+    
+    forceArg=''
+    if [ -n "$forceOverwrite" ]; then
+        forceArg='-f'
+    fi
+    if ! ln -s $forceArg "$executablePath" "$symlinkPath"; then
+        echo "WARNING: Symlink creation failed at: ${symlinkPath}" >&2
+    elif [ -n "$verboseMode" ]; then
+        echo "INFO: Symlink created: ${symlinkPath}"
+    fi
+done
