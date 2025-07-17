@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# Keep alive on X11 desktop by slightly moving the mouse cursor periodically.
+# It visits the four neightbour pixels of the current one.
+# It returns to the original pixel, except if it would be at the edge or corner.
+
+# Usage: ka [ <interval=5> [ <randomInterval=0> [ <delay=0.1> ] ] ]
+
+interval="${1:-5}"
+randomInterval="${2:-0}"
+delay="${3:-0.1}"
+
+while true; do
+    sleep "$interval"
+    if [ "$randomInterval" != '0' ]; then
+        randomInt=$( od -An -N4 -tu4 < /dev/urandom | tr -d ' ' )
+        randomFloat="$( awk -v v="$randomInt" -v high="$randomInterval" 'BEGIN { print (v / 4294967296) * high }' )"
+        sleep "$randomFloat"
+    fi
+    xdotool mousemove_relative -- 1 0
+    sleep "$delay"
+    xdotool mousemove_relative -- -1 -1
+    sleep "$delay"
+    xdotool mousemove_relative -- -1 1
+    sleep "$delay"
+    xdotool mousemove_relative -- 1 1
+    sleep "$delay"
+    xdotool mousemove_relative -- 0 -1
+done
